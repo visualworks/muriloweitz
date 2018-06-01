@@ -1,66 +1,24 @@
 <?php
 class BWGViewImage_browser {
   public function display($params, $from_shortcode = 0, $bwg = 0) {
-    global $WD_BWG_UPLOAD_DIR;
-    global $wd_bwg_options;
-    require_once(WD_BWG_DIR . '/framework/WDWLibrary.php');
-    require_once(WD_BWG_DIR . '/framework/WDWLibraryEmbed.php');
+    require_once(BWG()->plugin_dir . '/framework/WDWLibrary.php');
+    require_once(BWG()->plugin_dir . '/framework/WDWLibraryEmbed.php');
+
+    $order_by = $params['order_by'];
+    $image_title = $params['image_browser_title_enable'];
+    $enable_image_description = $params['image_browser_description_enable'];
+    $image_right_click = isset(BWG()->options->image_right_click) ? BWG()->options->image_right_click : 0;
+    $placeholder = $params['placeholder'];
+    $gallery_download = $params['gallery_download'];
+
     $theme_row = WDWLibrary::get_theme_row_data($params['theme_id']);
-    if (!isset($params['order_by'])) {
-      $order_by = 'asc';
-    }
-    else {
-      $order_by = $params['order_by'];
-    }
-    if (!isset($params['popup_enable_pinterest'])) {
-      $params['popup_enable_pinterest'] = 0;
-    }
-    if (!isset($params['popup_enable_tumblr'])) {
-      $params['popup_enable_tumblr'] = 0;
-    }
-    if (!isset($params['show_search_box'])) {
-      $params['show_search_box'] = 0;
-    }
-    if (!isset($params['search_box_width'])) {
-      $params['search_box_width'] = 180;
-    }
-    if (!isset($params['popup_enable_info'])) {
-      $params['popup_enable_info'] = 1;
-    }
-    if (!isset($params['popup_info_always_show'])) {
-      $params['popup_info_always_show'] = 0;
-    }
-    if (!isset($params['popup_info_full_width'])) {
-      $params['popup_info_full_width'] = 0;
-    }
-    if (!isset($params['popup_enable_rate'])) {
-      $params['popup_enable_rate'] = 0;
-    }
-    if (!isset($params['thumb_click_action']) || $params['thumb_click_action'] == 'undefined') {
-      $params['thumb_click_action'] = 'open_lightbox';
-    }
-    if (!isset($params['thumb_link_target'])) {
-      $params['thumb_link_target'] = 1;
-    }
-    if (!isset($params['popup_hit_counter'])) {
-      $params['popup_hit_counter'] = 0;
-    }
-    if (!isset($params['tag'])) {
-      $params['tag'] = 0;
-    }
-    if (!isset($params['show_gallery_description'])) {
-      $params['show_gallery_description'] = 0;
-    }
-    if (!isset($params['showthumbs_name'])) {
-      $params['showthumbs_name'] = $wd_bwg_options->showthumbs_name;
-    }
     if (!$theme_row) {
-      echo WDWLibrary::message(__('There is no theme selected or the theme was deleted.', 'bwg'), 'wd_error');
+      echo WDWLibrary::message(__('There is no theme selected or the theme was deleted.', BWG()->prefix), 'wd_error');
       return;
     }
     $gallery_row = WDWLibrary::get_gallery_row_data($params['gallery_id']);
     if (!$gallery_row && $params["tag"] == 0) {
-      echo WDWLibrary::message(__('There is no gallery selected or the gallery was deleted.', 'bwg'), 'wd_error');
+      echo WDWLibrary::message(__('There is no gallery selected or the gallery was deleted.', BWG()->prefix), 'wd_error');
       return;
     }
     $image_rows = WDWLibrary::get_image_rows_data($params['gallery_id'], $bwg, 'image_browser', '', $params['tag'], 1, 1, $params['sort_by'], $params['order_by']);
@@ -69,22 +27,13 @@ class BWGViewImage_browser {
     $images_count = count($image_rows);
     if (!$image_rows) {
       if ($params['tag']) {
-        echo WDWLibrary::message(__('There are no images.', 'bwg'), 'wd_error');
+        echo WDWLibrary::message(__('There are no images.', BWG()->prefix), 'wd_error');
       }
       else {
-        echo WDWLibrary::message(__('There are no images in this gallery.', 'bwg'), 'wd_error');
+        echo WDWLibrary::message(__('There are no images in this gallery.', BWG()->prefix), 'wd_error');
       }
     }
-    $image_title = $params['image_browser_title_enable'];
-    $enable_image_description = $params['image_browser_description_enable'];
-    $placeholder = isset($wd_bwg_options->placeholder) ? $wd_bwg_options->placeholder : '';
-    $image_right_click = $wd_bwg_options->image_right_click;
-    if (!isset($params['popup_fullscreen'])) {
-      $params['popup_fullscreen'] = 0;
-    }
-    if (!isset($params['popup_autoplay'])) {
-      $params['popup_autoplay'] = 0;
-    }
+
     $params_array = array(
       'action' => 'GalleryBox',
       'current_view' => $bwg,
@@ -117,12 +66,17 @@ class BWGViewImage_browser {
       'slideshow_effect_duration' => isset($params['popup_effect_duration']) ? $params['popup_effect_duration'] : 1,
       'tags' => (isset($params['tag']) ? $params['tag'] : 0)
     );
+    if ( BWG()->is_pro ) {
+      $current_url = (is_ssl() ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+      $params_array['current_url'] = urlencode($current_url);;
+      $params_array['enable_image_ecommerce'] = $params['popup_enable_ecommerce'];
+    }
     $items_per_page = array('images_per_page' => 1, 'load_more_image_count' => 1);
     if ($params['watermark_type'] == 'none') {
       $params_array['watermark_font'] = '';
       $params_array['watermark_color'] = '';
       $params_array['watermark_font_size'] = '';
-      $params_array['watermark_opacity'] = '';
+      $params_array['watermark_opacity'] = 0;
       $text_align = '';
       $vertical_align = '';
       $params_array['watermark_width'] = '';
@@ -130,7 +84,7 @@ class BWGViewImage_browser {
     }
     if ($params['watermark_type'] != 'none') {
       $params_array['watermark_link'] = $params['watermark_link'];
-      $params_array['watermark_opacity'] = $params['watermark_opacity'];
+      $params_array['watermark_opacity'] = (int) $params['watermark_opacity'];
       $params_array['watermark_position'] =(($params['watermark_position'] != 'undefined') ? $params['watermark_position'] : 'top-center');
 			$position = explode('-', $params_array['watermark_position']);
 			$vertical_align = $position[0];
@@ -143,7 +97,7 @@ class BWGViewImage_browser {
       $params_array['watermark_font_size'] = $params['watermark_font_size'];
       $params_array['watermark_font'] = $params['watermark_font'];
       $params_array['watermark_color'] = $params['watermark_color'];
-			$params_array['watermark_width'] = '';
+			$params_array['watermark_width'] = 0;
 			$watermark_image_or_text = $params_array['watermark_text'];
 			$watermark_a = 'bwg_watermark_text_' . $bwg;
 			$watermark_div = 'class="bwg_image_browser_watermark_text_' . $bwg . '"';
@@ -152,7 +106,7 @@ class BWGViewImage_browser {
       $show_watermark = TRUE;
       $watermark_text_image = FALSE;
       $params_array['watermark_url'] = $params['watermark_url'];
-      $params_array['watermark_width'] = $params['watermark_width'];
+      $params_array['watermark_width'] = (int) $params['watermark_width'];
       $params_array['watermark_height'] = $params['watermark_height'];
 			$watermark_image_or_text = '<img class="bwg_image_browser_watermark_img_' . $bwg . '" src="' . urldecode($params_array['watermark_url']) . '" />';
 			$watermark_a = '';
@@ -162,7 +116,7 @@ class BWGViewImage_browser {
        $params_array['watermark_font_size'] = ''; 
     }
     $image_browser_image_title_align = (isset($theme_row->image_browser_image_title_align)) ? $theme_row->image_browser_image_title_align : 'top';
-    if (!isset($theme_row->image_browser_gal_title_font_color)) {
+     if (!isset($theme_row->image_browser_gal_title_font_color)) {
         $theme_row->image_browser_gal_title_font_color = 'CCCCCC';
       }
       if (!isset($theme_row->image_browser_gal_title_font_style)) {
@@ -184,12 +138,11 @@ class BWGViewImage_browser {
         $theme_row->image_browser_gal_title_align = 'center';
       }
     $inline_style = $this->inline_styles($bwg, $theme_row, $params, $params_array, $text_align, $vertical_align);
-    if ($wd_bwg_options->use_inline_stiles_and_scripts) {
+    if (BWG()->options->use_inline_stiles_and_scripts) {
       wp_enqueue_style('bwg_frontend');
       wp_add_inline_style('bwg_frontend', $inline_style);
       wp_enqueue_style('bwg_font-awesome');
       wp_enqueue_style('bwg_mCustomScrollbar');
-      $google_fonts = WDWLibrary::get_google_fonts();
       wp_enqueue_style('bwg_googlefonts');
       if (!wp_script_is('bwg_frontend', 'done')) {
         wp_print_scripts('bwg_frontend');
@@ -203,6 +156,9 @@ class BWGViewImage_browser {
         }
         if (!wp_script_is('bwg_gallery_box', 'done')) {
           wp_print_scripts('bwg_gallery_box');
+        }
+        if ( BWG()->is_pro && !wp_script_is('bwg_raty', 'done')) {
+          wp_print_scripts('bwg_raty');
         }
       }
       if (!wp_script_is('bwg_jquery_mobile', 'done')) {
@@ -218,7 +174,7 @@ class BWGViewImage_browser {
         <form id="gal_front_form_<?php echo $bwg; ?>" method="post" action="#" data-current="<?php echo $bwg; ?>">
           <?php
           if ($params['show_search_box']) {
-            WDWLibrary::ajax_html_frontend_search_box('gal_front_form_' . $bwg, $bwg, 'bwg_standart_thumbnails_' . $bwg, $images_count, $params['search_box_width'], $placeholder);
+            WDWLibrary::ajax_html_frontend_search_box('gal_front_form_' . $bwg, $bwg, 'bwg_image_browser_' . $bwg, $images_count, $params['search_box_width'], $placeholder);
           }
           if ($params['showthumbs_name'] && $gallery_row->name != '') {
             ?>
@@ -235,15 +191,15 @@ class BWGViewImage_browser {
             <div id="ajax_loading_<?php echo $bwg; ?>" style="position:absolute;width: 100%; z-index: 115; text-align: center; height: 100%; vertical-align: middle; display:none;">
               <div style="display: table; vertical-align: middle; width: 100%; height: 100%; background-color: #FFFFFF; opacity: 0.7; filter: Alpha(opacity=70);">
                 <div style="display: table-cell; text-align: center; position: relative; vertical-align: middle;" >
-                  <div id="loading_div_<?php echo $bwg; ?>" class="bwg_spider_ajax_loading" style="display: inline-block; text-align:center; position:relative; vertical-align:middle; background-image:url(<?php echo WD_BWG_URL . '/images/ajax_loader.gif'; ?>); float: none; width:30px;height:30px;background-size:30px 30px;">
+                  <div id="loading_div_<?php echo $bwg; ?>" class="bwg_spider_ajax_loading" style="display: inline-block; text-align:center; position:relative; vertical-align:middle; background-image:url(<?php echo BWG()->plugin_url . '/images/ajax_loader.png'; ?>); float: none; width:30px;height:30px;background-size:30px 30px;">
                   </div>
                 </div>
               </div>
             </div>
-            <div class="image_browser_images_<?php echo $bwg; ?>" id="bwg_standart_thumbnails_<?php echo $bwg; ?>" >
+            <div class="image_browser_images_<?php echo $bwg; ?>" id="bwg_image_browser_<?php echo $bwg; ?>" >
               <?php
               if ( $theme_row->page_nav_position == 'top') {
-                WDWLibrary::ajax_html_frontend_page_nav($theme_row, $page_nav['total'], $page_nav['limit'], 'gal_front_form_' . $bwg, $items_per_page, $bwg, 'bwg_standart_thumbnails_' . $bwg, 0, 'album', $wd_bwg_options->enable_seo);
+                WDWLibrary::ajax_html_frontend_page_nav($theme_row, $page_nav['total'], $page_nav['limit'], 'gal_front_form_' . $bwg, $items_per_page, $bwg, 'bwg_image_browser_' . $bwg, 0, 'album', BWG()->options->enable_seo);
               }
               foreach ($image_rows as $image_row) {
                 $params_array['image_id'] = (isset($_POST['image_id']) ? esc_html($_POST['image_id']) : $image_row->id);
@@ -284,14 +240,13 @@ class BWGViewImage_browser {
                       if (!$is_embed) {
                       ?>
                         <a style="position:relative;" <?php echo ($params['thumb_click_action'] == 'open_lightbox' ? (' class="bwg_lightbox_' . $bwg . '" data-image-id="' . $image_row->id . '"') : ($params['thumb_click_action'] == 'redirect_to_url' && $image_row->redirect_url ? 'href="' . $image_row->redirect_url . '" target="' .  ($params['thumb_link_target'] ? '_blank' : '')  . '"' : '')) ?>>
-                          <img class="bwg_image_browser_img_<?php echo $bwg; ?>" src="<?php echo site_url() . '/' . $WD_BWG_UPLOAD_DIR . $image_row->image_url; ?>" alt="<?php echo $image_row->alt; ?>" />
+                          <img class="bwg_image_browser_img_<?php echo $bwg; ?>" src="<?php echo site_url() . '/' . BWG()->upload_dir . $image_row->image_url; ?>" alt="<?php echo $image_row->alt; ?>" />
                         </a>
                       <?php 
                       }
-                      else{ /*$is_embed*/
-
-                        if($is_embed_16x9){
-                          WDWLibraryEmbed::display_embed($image_row->filetype, $image_row->filename, array('id'=>"bwg_embed_frame_16x9_".$bwg,'width'=>$params['image_browser_width'], 'height'=>$params['image_browser_width']*0.5625, 'frameborder'=>"0", 'allowfullscreen'=>"allowfullscreen", 'style'=>"position: relative; margin:0;"));          
+                      else { /*$is_embed*/
+                        if($is_embed_16x9) {
+                          WDWLibraryEmbed::display_embed($image_row->filetype, $image_row->image_url, $image_row->filename, array('id' => "bwg_embed_frame_16x9_" . $bwg, 'width' => $params['image_browser_width'], 'height' => $params['image_browser_width'] * 0.5625, 'frameborder' => "0", 'allowfullscreen' => "allowfullscreen", 'style' => "position: relative; margin:0;"));          
                         }
                         else if($is_embed_instagram_post) {
                           $instagram_post_width = $params['image_browser_width'];
@@ -302,13 +257,13 @@ class BWGViewImage_browser {
                             $instagram_post_height = explode(' ', $image_resolution[1]);
                             $instagram_post_height = $instagram_post_height[0];
                           }
-                          WDWLibraryEmbed::display_embed($image_row->filetype, $image_row->filename, array('class' => "bwg_embed_frame_instapost_" . $bwg, 'data-width' => $instagram_post_width, 'data-height' => $instagram_post_height, 'frameborder' => "0", 'allowfullscreen' => "allowfullscreen", 'style' => "position: relative; margin:0;"));          
+                          WDWLibraryEmbed::display_embed($image_row->filetype, $image_row->image_url, $image_row->filename, array('class' => "bwg_embed_frame_instapost_" . $bwg, 'data-width' => $instagram_post_width, 'data-height' => $instagram_post_height, 'frameborder' => "0", 'allowfullscreen' => "allowfullscreen", 'style' => "position: relative; margin:0;"));          
                         }
                         else{/*for instagram image, video and flickr enable lightbox onclick*/
                           ?>
                           <a style="position:relative;" <?php echo ($params['thumb_click_action'] == 'open_lightbox' ? (' class="bwg_lightbox_' . $bwg . '" data-image-id="' . $image_row->id . '"') : ($image_row->redirect_url ? 'href="' . $image_row->redirect_url . '" target="' .  ($params['thumb_link_target'] ? '_blank' : '')  . '"' : '')) ?>>
                             <?php
-                            WDWLibraryEmbed::display_embed($image_row->filetype, $image_row->filename, array('id'=>"bwg_embed_frame_".$bwg,'width'=>$params['image_browser_width'], 'height'=>'auto', 'frameborder'=>"0", 'allowfullscreen'=>"allowfullscreen", 'style'=>"position: relative; margin:0;"));          
+                            WDWLibraryEmbed::display_embed($image_row->filetype, $image_row->image_url, $image_row->filename, array('id'=>"bwg_embed_frame_".$bwg,'width'=>$params['image_browser_width'], 'height'=>'auto', 'frameborder'=>"0", 'allowfullscreen'=>"allowfullscreen", 'style'=>"position: relative; margin:0;"));          
                           ?>
                           </a>
 
@@ -379,8 +334,21 @@ class BWGViewImage_browser {
                 </div>
                 <?php
               }
+              if ( BWG()->is_pro && $gallery_download && $image_rows ) {
+                $query_url = addslashes(add_query_arg(array(
+                                                        "action" => "download_gallery",
+                                                        "gallery_id" => $params['gallery_id'],
+                                                      ), admin_url('admin-ajax.php')));
+                ?>
+                <div class="bwg_download_gallery">
+                  <a href="<?php echo $query_url; ?>">
+                    <i title="<?php _e('Download gallery', BWG()->prefix); ?>" class="bwg_ctrl_btn fa fa-download"></i>
+                  </a>
+                </div>
+                <?php
+              }
               if ( $theme_row->page_nav_position == 'bottom') {
-                WDWLibrary::ajax_html_frontend_page_nav($theme_row, $page_nav['total'], $page_nav['limit'], 'gal_front_form_' . $bwg, $items_per_page, $bwg, 'bwg_standart_thumbnails_' . $bwg, 0, 'album', $wd_bwg_options->enable_seo);
+                WDWLibrary::ajax_html_frontend_page_nav($theme_row, $page_nav['total'], $page_nav['limit'], 'gal_front_form_' . $bwg, $items_per_page, $bwg, 'bwg_image_browser_' . $bwg, 0, 'album', BWG()->options->enable_seo);
               }
               ?>
             </div>
@@ -391,18 +359,14 @@ class BWGViewImage_browser {
       </div>
     </div>
     <script>
-      jQuery(window).load(function () {
-        <?php
-        if ($image_right_click) {
-          ?>
+      jQuery(window).on("load", function () {
+        <?php if ($image_right_click) { ?>
           /* Disable right click.*/
           jQuery('div[id^="bwg_container"]').bind("contextmenu", function (e) {
             return false;
           });
           jQuery('div[id^="bwg_container"]').css('webkitTouchCallout','none');
-          <?php
-        }
-        ?>
+		<?php } ?>
       });
       jQuery(window).resize(function() {
         bwg_image_browser_<?php echo $bwg; ?>();
@@ -411,6 +375,21 @@ class BWGViewImage_browser {
         var filtersearchname = jQuery("#bwg_search_input_<?php echo $bwg; ?>" ).val() ? "&filter_search_name_<?php echo $bwg; ?>=" + jQuery("#bwg_search_input_<?php echo $bwg; ?>" ).val() : '';
         spider_createpopup('<?php echo addslashes(add_query_arg($params_array, admin_url('admin-ajax.php'))); ?>&image_id=' + image_id + filtersearchname, '<?php echo $bwg; ?>', '<?php echo $params['popup_width']; ?>', '<?php echo $params['popup_height']; ?>', 1, 'testpopup', 5, "<?php echo $theme_row->lightbox_ctrl_btn_pos ;?>");
       }
+      <?php
+      if ( BWG()->is_pro ) {
+        ?>
+      var bwg_hash = window.location.hash.substring(1);
+      if (bwg_hash) {
+        if (bwg_hash.indexOf("bwg") != "-1") {
+          bwg_hash_array = bwg_hash.replace("bwg", "").split("/");
+          if (bwg_hash_array[0] == "<?php echo $params_array['gallery_id']; ?>") {
+            bwg_gallery_box_<?php echo $bwg; ?>(bwg_hash_array[1]);
+          }
+        }
+      }
+        <?php
+      }
+      ?>
       function bwg_document_ready_<?php echo $bwg; ?>() {
         var bwg_touch_flag = false;
         jQuery(".bwg_lightbox_<?php echo $bwg; ?>").on("click", function () {
@@ -704,17 +683,18 @@ class BWGViewImage_browser {
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-      }
-      #bwg_container1_<?php echo $bwg; ?> #bwg_container2_<?php echo $bwg; ?> .bwg_gal_title_<?php echo $bwg; ?> {
-        background-color: rgba(0, 0, 0, 0);
-        color: #<?php echo $theme_row->image_browser_gal_title_font_color; ?>;
-        display: block;
-        font-family: <?php echo $theme_row->image_browser_gal_title_font_style; ?>;
-        font-size: <?php echo $theme_row->image_browser_gal_title_font_size; ?>px;
-        font-weight: <?php echo $theme_row->image_browser_gal_title_font_weight; ?>;
-        padding: <?php echo $theme_row->image_browser_gal_title_margin; ?>;
-        text-shadow: <?php echo $theme_row->image_browser_gal_title_shadow; ?>;
-        text-align: <?php echo $theme_row->image_browser_gal_title_align; ?>;
+       ecoration: none;
+    }
+    #bwg_container1_<?php echo $bwg; ?> #bwg_container2_<?php echo $bwg; ?> .bwg_gal_title_<?php echo $bwg; ?> {
+      background-color: rgba(0, 0, 0, 0);
+      color: #<?php echo $theme_row->image_browser_gal_title_font_color; ?>;
+      display: block;
+      font-family: <?php echo $theme_row->image_browser_gal_title_font_style; ?>;
+      font-size: <?php echo $theme_row->image_browser_gal_title_font_size; ?>px;
+      font-weight: <?php echo $theme_row->image_browser_gal_title_font_weight; ?>;
+      padding: <?php echo $theme_row->image_browser_gal_title_margin; ?>;
+      text-shadow: <?php echo $theme_row->image_browser_gal_title_shadow; ?>;
+      text-align: <?php echo $theme_row->image_browser_gal_title_align; ?>;
     }
     <?php
     return ob_get_clean();
